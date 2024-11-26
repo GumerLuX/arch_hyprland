@@ -2,6 +2,9 @@
 
 # Este script debe ejecutarse con permisos de root
 
+echo "Cual es tu usuario"
+read USUARIO
+
 # Variables de configuración
 USER_NAME="$USUARIO"  # Cambia "tu_usuario" por tu nombre de usuario
 SHELL="/bin/bash"

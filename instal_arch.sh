@@ -17,9 +17,12 @@ read BOOT
 echo Cual es la particion root:
 read ROOT
 
+echo "El hostname de tu PC es:"
+read host_name
+
 # Formatea las particiones
 echo "Formateando la partición de Linux en ext4..."
-mkfs.ext4 /dev/$ROOT  # Ajusta /dev/sdaY a la partición de Linux que hayas creado
+mkfs.ext4 /dev/$ROOT
 
 #echo "Formateando la partición EFI..."
 #mkfs.fat -F32 /dev/sda1  # Ajusta /dev/sda1 a la partición EFI
@@ -48,9 +51,17 @@ hwclock --systohc
 sed -i 's/#es_ES.UTF-8 UTF-8/es_ES.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 echo "LANG=es_ES.UTF-8" > /etc/locale.conf
+echo KEYMAP=es > /etc/vconsole.conf
+cat /etc/vconsole.conf
+sleep 2
 
 # Configura el nombre del host
-echo "nombre_del_host" > /etc/hostname  # Ajusta "nombre_del_host"
+echo "$host_name" > /etc/hostname
+
+echo "Configurando el hosts"
+echo -e "127.0.0.1       localhost\n::1             localhost\n127.0.0.1       $PC.localhost     $PC" > /etc/hosts
+cat /etc/hosts
+sleep 2
 
 # Configura la contraseña de root
 echo "Configura la contraseña de root:"
@@ -59,9 +70,10 @@ passwd
 # "Configura cuenta de usuario:"
 echo "Configura cuenta de usuario:"
 read USUARIO
-arch-chroot /mnt useradd -m -g users -G audio,lp,optical,storage,video,wheel,games,power,scanner -s /bin/bash "$USUARIO"
+useradd -m -g users -G audio,lp,optical,storage,video,wheel,power -s /bin/bash "$USUARIO"
 echo "Añadimos contraseña de usuario"
 passwd $USUARIO
+sleep 2
 
 # Instala bootctl
 echo "Instalando bootctl..."
