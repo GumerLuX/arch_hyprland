@@ -1,103 +1,90 @@
 #!/bin/bash
 
-# Conecta a Internet (ajusta según sea necesario)
-#echo "Conectando a internet..."
-#iwctl station wlan0 connect NOMBRE_DE_TU_RED
+# Configuración inicial
+echo "Estableciendo configuración de teclado e idioma..."
+loadkeys es
+setfont latarcyrheb-sun16
 
-# Actualiza el reloj
+echo "Sincronizando reloj..."
 timedatectl set-ntp true
 
-# Configura las particiones (ajusta el dispositivo según sea necesario)
-echo "Particionando el disco..."
-#cfdisk /dev/sda
+# Particionado del disco (usa /dev/sdX; reemplázalo con tu disco objetivo)
+DISK="/dev/sda"
+echo "Particionando el disco $DISK..."
+parted -s $DISK mklabel gpt
+parted -s $DISK mkpart ESP fat32 1MiB 513MiB
+parted -s $DISK set 1 boot on
+parted -s $DISK mkpart primary linux-swap 513MiB 2.5GiB
+parted -s $DISK mkpart primary ext4 2.5GiB 100%
 
-echo Cual es la particion boot:
-read BOOT
+# Formateo de particiones
+echo "Formateando particiones..."
+mkfs.fat -F32 "${DISK}1"
+mkswap "${DISK}2"
+mkfs.ext4 "${DISK}3"
 
-echo Cual es la particion root:
-read ROOT
-
-echo "El hostname de tu PC es:"
-read host_name
-
-# Formatea las particiones
-echo "Formateando la partición de Linux en ext4..."
-mkfs.ext4 /dev/$ROOT
-
-#echo "Formateando la partición EFI..."
-#mkfs.fat -F32 /dev/sda1  # Ajusta /dev/sda1 a la partición EFI
-
-# Monta las particiones
+# Montando las particiones
 echo "Montando las particiones..."
-mount /dev/$ROOT /mnt
+mount "${DISK}3" /mnt
 mkdir -p /mnt/boot
-mount /dev/$BOOT /mnt/boot
+mount "${DISK}1" /mnt/boot
+swapon "${DISK}2"
 
-# Instala los paquetes base de Arch Linux
-echo "Instalando Arch Linux..."
+# Instalación base
+echo "Instalando el sistema base..."
 pacstrap /mnt base linux linux-firmware
 
-# Genera el archivo fstab
+# Generar el fstab
+echo "Generando el archivo fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# Accede al sistema instalado
-arch-chroot /mnt <<EOF
+# Chroot
+echo "Entrando en el sistema instalado..."
+arch-chroot /mnt /bin/bash <<EOF
 
-# Configura la zona horaria
-ln -sf /usr/share/zoneinfo/Europe/Madrid /etc/localtime  # Ajusta Region/City a tu zona horaria
+# Configuración del sistema
+echo "Configurando la zona horaria..."
+ln -sf /usr/share/zoneinfo/Europe/Madrid /etc/localtime
 hwclock --systohc
 
-# Configura el idioma
-sed -i 's/#es_ES.UTF-8 UTF-8/es_ES.UTF-8 UTF-8/' /etc/locale.gen
+echo "Configurando locales..."
+sed -i 's/^#es_ES.UTF-8 UTF-8/es_ES.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 echo "LANG=es_ES.UTF-8" > /etc/locale.conf
-echo KEYMAP=es > /etc/vconsole.conf
-cat /etc/vconsole.conf
-sleep 2
 
-# Configura el nombre del host
-echo "$host_name" > /etc/hostname
+echo "Configurando teclado..."
+echo "KEYMAP=es" > /etc/vconsole.conf
 
-echo "Configurando el hosts"
-echo -e "127.0.0.1       localhost\n::1             localhost\n127.0.0.1       $PC.localhost     $PC" > /etc/hosts
-cat /etc/hosts
-sleep 2
+echo "Configurando hostname..."
+echo "archlinux" > /etc/hostname
+echo "127.0.0.1 localhost" >> /etc/hosts
+echo "::1 localhost" >> /etc/hosts
+echo "127.0.1.1 archlinux.localdomain archlinux" >> /etc/hosts
 
-# Configura la contraseña de root
-echo "Configura la contraseña de root:"
+# Configuración del usuario root y usuario sindo
+echo "Configurando contraseñas de usuarios..."
+echo "Establece la contraseña de root:"
 passwd
+useradd -m -G wheel sindo
+echo "Establece la contraseña para el usuario sindo:"
+passwd sindo
+echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 
-# "Configura cuenta de usuario:"
-echo "Configura cuenta de usuario:"
-read USUARIO
-useradd -m -g users -G audio,lp,optical,storage,video,wheel,power -s /bin/bash "$USUARIO"
-echo "Añadimos contraseña de usuario"
-passwd $USUARIO
-sleep 2
-
-# Instala bootctl
-echo "Instalando bootctl..."
-bootctl install
-
-# Crea la entrada de Arch Linux en bootctl
-echo "Configurando bootctl..."
-cat <<EOL > /boot/loader/entries/arch.conf
-title   Arch Linux
-linux   /vmlinuz-linux
-initrd  /initramfs-linux.img
-options root=PARTUUID=$(blkid -s PARTUUID -o value /dev/$ROOT) rw  # Ajusta /dev/$ROOT a la partición de Linux
-EOL
-
-# Configura bootctl para arranque predeterminado
-cat <<EOL > /boot/loader/loader.conf
-default arch
-timeout 5
-console-mode max
-EOL
-
-# Instala y habilita NetworkManager
-pacman -S --noconfirm networkmanager
-systemctl enable NetworkManager
+# Instalación del cargador de arranque
+echo "Instalando bootloader..."
+BOOTLOADER="grub" # Cambiar a "bootctl" si prefieres systemd-boot
+if [ "$BOOTLOADER" = "grub" ]; then
+    pacman -S --noconfirm grub efibootmgr
+    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+    grub-mkconfig -o /boot/grub/grub.cfg
+else
+    bootctl install
+    echo "default arch" > /boot/loader/loader.conf
+    echo "title Arch Linux" > /boot/loader/entries/arch.conf
+    echo "linux /vmlinuz-linux" >> /boot/loader/entries/arch.conf
+    echo "initrd /initramfs-linux.img" >> /boot/loader/entries/arch.conf
+    echo "options root=$(blkid -s UUID -o value ${DISK}3) rw" >> /boot/loader/entries/arch.conf
+fi
 
 EOF
 
@@ -106,10 +93,8 @@ echo "Copiando el directorio a root"
 		ls /mnt/root/
 pause "Enter para continuar"
 
-# Sal del entorno chroot y desmonta las particiones
-echo "Terminando la instalación..."
+# Finalización
+echo "Desmontando y reiniciando..."
 umount -R /mnt
-
-# Reinicia el sistema
-echo "Instalación completa. Reiniciando..."
-reboot
+swapoff "${DISK}2"
+echo "Instalación completada. Reinicia el sistema."

@@ -1,21 +1,16 @@
 #!/bin/bash
 
-# Este script debe ejecutarse con permisos de root
-
-echo "Cual es tu usuario"
-read USUARIO
-
 # Variables de configuración
-USER_NAME="$USUARIO"  # Cambia "tu_usuario" por tu nombre de usuario
-SHELL="/bin/bash"
+USER_NAME=$sindo  # Usa el nombre de usuario actual
+CONFIG_DIR="$HOME/.config/hypr"
 
 # Actualizar e instalar paquetes básicos
 echo "Actualizando sistema e instalando paquetes básicos..."
-pacman -Syu --noconfirm
-pacman -S --noconfirm base-devel git wget neovim nano
+sudo pacman -Syu --noconfirm
+sudo pacman -S --noconfirm base-devel git wget neovim
 
-# Instalar el repositorio AUR helper (yay)
-echo "Instalando yay..."
+# Instalar yay en el entorno del usuario (si no está instalado)
+echo "Instalando yay (AUR helper)..."
 if ! command -v yay &> /dev/null; then
     git clone https://aur.archlinux.org/yay.git /tmp/yay
     cd /tmp/yay && makepkg -si --noconfirm
@@ -31,11 +26,12 @@ yay -S --noconfirm hyprland wayland wayland-protocols xorg-xwayland \
 
 # Instalación de controladores y herramientas adicionales para VirtualBox
 echo "Instalando paquetes adicionales para VirtualBox..."
-pacman -S --noconfirm mesa xf86-video-vmware virtualbox-guest-utils
+sudo pacman -S --noconfirm mesa xf86-video-vmware virtualbox-guest-utils
 
 # Habilitar servicios para VirtualBox Guest Additions
-systemctl enable vboxservice.service
-systemctl start vboxservice.service
+echo "Habilitando servicios de VirtualBox Guest Additions..."
+sudo systemctl enable vboxservice.service
+sudo systemctl start vboxservice.service
 
 # Instalación de utilidades de sistema y apariencia
 echo "Instalando utilidades de sistema y temas..."
@@ -49,22 +45,22 @@ yay -S --noconfirm \
 
 # Configuración de LightDM (gestor de inicio de sesión)
 echo "Configurando LightDM..."
-systemctl enable lightdm.service
+sudo systemctl enable lightdm.service
 
 # Crear configuración básica para Hyprland
-echo "Creando configuración básica de Hyprland para el usuario $USER_NAME..."
-CONFIG_DIR="/home/$USER_NAME/.config/hypr"
-mkdir -p $CONFIG_DIR
-cat <<EOF > $CONFIG_DIR/hyprland.conf
+echo "Creando configuración básica de Hyprland en $CONFIG_DIR"
+mkdir -p "$CONFIG_DIR"
+cat <<EOF > "$CONFIG_DIR/hyprland.conf"
 # Configuración básica de Hyprland
 monitor=,preferred,auto,1
 exec-once=wl-paste -t text --watch cliphist store
 exec-once=lightdm
-layout=es
+layout=us
 EOF
 
-# Ajustes de permisos para el usuario
-chown -R "$USER_NAME":"$USER_NAME" "/home/$USER_NAME/.config/hypr"
+# Ajustar permisos para el usuario actual
+echo "Ajustando permisos en el directorio de configuración..."
+chown -R "$USER_NAME":"$USER_NAME" "$CONFIG_DIR"
 
 # Mensaje final
 echo "Instalación completa. Reinicia el sistema para iniciar sesión en Hyprland."
