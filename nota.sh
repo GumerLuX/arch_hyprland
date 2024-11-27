@@ -113,13 +113,10 @@ echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 # Habilitar servicios
 systemctl enable NetworkManager
 
-EOF
-
 write_header "Instalación del cargador de arranque"
-print_info "Cual es el cargador que eliges grub o bootctl"
-read cargador
+# Instalación del cargador de arranque
 echo "Instalando bootloader..."
-BOOTLOADER="$cargador" # Cambiar a "bootctl" si prefieres systemd-boot
+BOOTLOADER="grub" # Cambiar a "bootctl" si prefieres systemd-boot
 if [ "$BOOTLOADER" = "grub" ]; then
     pacman -S --noconfirm grub efibootmgr
     grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
@@ -133,17 +130,15 @@ else
     echo "options root=$(blkid -s UUID -o value ${DISK}3) rw" >> /boot/loader/entries/arch.conf
 fi
 
-echo "Copiando el directorio a root"
+EOF
+
+write_header "Copiando el directorio a root"
 		cp -R "$(pwd)" /mnt/root
 		ls /mnt/root/
 pause "Enter para continuar"
 
 echo "### Instalación completada. Desmontando particiones ###"
 umount -R /mnt
-swapoff -a
-echo "### El sistema está listo para reiniciar ###"
-
-
 
 # Calcular el tiempo de ejecución
 end_time=$(date +%s)
@@ -155,3 +150,12 @@ minutes=$(((execution_time % 3600) / 60))
 seconds=$((execution_time % 60))
 
 echo "Tiempo de ejecución: ${hours}h ${minutes}m ${seconds}s"
+
+pause_function
+
+swapoff -a
+echo "### El sistema está listo para reiniciar ###"
+
+
+
+
