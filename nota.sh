@@ -135,7 +135,7 @@ EOF
 write_header "Copiando el directorio a root"
 		cp -R "$(pwd)" /mnt/root
 		ls /mnt/root/
-pause "Enter para continuar"
+pause_function "Enter para continuar"
 
 echo "### Instalación completada. Desmontando particiones ###"
 umount -R /mnt
