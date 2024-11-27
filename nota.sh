@@ -115,6 +115,24 @@ systemctl enable NetworkManager
 
 EOF
 
+write_header "Instalación del cargador de arranque"
+print_info "Cual es el cargador que eliges grub o bootctl"
+read cargador
+echo "Instalando bootloader..."
+BOOTLOADER="$cargador" # Cambiar a "bootctl" si prefieres systemd-boot
+if [ "$BOOTLOADER" = "grub" ]; then
+    pacman -S --noconfirm grub efibootmgr
+    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+    grub-mkconfig -o /boot/grub/grub.cfg
+else
+    bootctl install
+    echo "default arch" > /boot/loader/loader.conf
+    echo "title Arch Linux" > /boot/loader/entries/arch.conf
+    echo "linux /vmlinuz-linux" >> /boot/loader/entries/arch.conf
+    echo "initrd /initramfs-linux.img" >> /boot/loader/entries/arch.conf
+    echo "options root=$(blkid -s UUID -o value ${DISK}3) rw" >> /boot/loader/entries/arch.conf
+fi
+
 echo "Copiando el directorio a root"
 		cp -R "$(pwd)" /mnt/root
 		ls /mnt/root/
