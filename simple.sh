@@ -49,16 +49,20 @@ mkfs.ext4 /dev/$ROOT
 pause_function
 
 print "Montamos las particiones root y boot"
-mount /dev/sda2 /mnt
+mount /dev/$ROOT /mnt
 mkdir -p /mnt/boot
-mount /dev/sda1 /mnt/boot
+mount /dev/$BOOT /mnt/boot
 lsblk
 print_info "Ya tenemos el disco preparado para la instalacion, empezemos"
 pause_function
 
+print_line
+print_info "Actualizamos la hora"
 timedatectl set-ntp true
 timedatectl status
 
+print_line
+print_info "Instalando el sistema base"
 pacstrap /mnt base base-devel linux linux-firmware --noconfirm
 
 pacstrap /mnt nano networkmanager dhcpcd netctl wpa_supplicant git neofetch --noconfirm
