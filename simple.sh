@@ -9,27 +9,43 @@ fi
 
 write_header "Necesitamos saber unos parametros para realizarla instalacion"
 print_info "El mombre de tu PC"
-read host_name
+read PC
 print_info "El mombre de usuario"
 read usuario
 pause_function
 
 write_header "Configurarcion del disco"
-print_info "Con cfdisk creamos tres particiones\n1 para boot\n2 para sistema root\3 para intercambio swap"
+print_info "Con cfdisk creamos tres particiones\n1 para boot\n2 para para intercambio swap\3 sistema root"
 cfdisk
 write_header "Con estos datos podemos enpezar la instalacion, comprobando"
 pause_function
+clear
+
+write_header "Seleccionamos las particiones"
+fdisk -l
+print_line
+print_info "Seleccinamos la particion boot"
+read BOOT
+
+print_line
+print_info "Seleccinamos la particion swap"
+read SWAP
+
+print_line
+print_info "Seleccinamos la particion del sistema root /"
+read ROOT
+
 
 print_info "Formatemos la paricion boot"
 fdisk -l
-mkfs.fat -F32 /dev/sda1
+mkfs.fat -F32 /dev/$BOOT
 
 print_info "Formatemos la paricion swap y montamos"
-mkswap /dev/sda3
-swapon /dev/sda3
+mkswap /dev/$SWAP
+swapon /dev/$SWAP
 
 print_info "Formatemos la paricion root"
-mkfs.ext4 /dev/sda2
+mkfs.ext4 /dev/$ROOT
 pause_function
 
 print "Montamos las particiones root y boot"
@@ -43,9 +59,9 @@ pause_function
 timedatectl set-ntp true
 timedatectl status
 
-pacstrap /mnt base base-devel nano linux linux-firmware
+pacstrap /mnt base base-devel linux linux-firmware --noconfirm
 
-pacstrap /mnt networkmanager dhcpcd netctl wpa_supplicant nano git neofetch --noconfirm
+pacstrap /mnt nano networkmanager dhcpcd netctl wpa_supplicant git neofetch --noconfirm
 
 genfstab -pU /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
@@ -70,8 +86,13 @@ arch-chroot /mnt mkinitcpio -P
 
 arch-chroot /mnt bootctl --path=/boot install
 		echo -e "default  arch\ntimeout  5\neditor  0" > /mnt/boot/loader/loader.conf
-		partuuid=$(blkid -s PARTUUID -o value /dev/sda2)
-		echo -e "title\tArch Linux\nlinux\t/vmlinuz-linux\ninitrd\t/initramfs-linux.img\noptions\troot=PARTUUID=$partuuid rw" > /mnt/boot/loader/entries/arch.conf
+		partuuid=$(blkid -s PARTUUID -o value /dev/$ROOT)
+        echo "title Arch Linux" > /boot/loader/entries/arch.conf
+    	echo "linux /vmlinuz-linux" >> /boot/loader/entries/arch.conf
+    	echo "initrd  /intel-ucode.img" >> /boot/loader/entries/arch.conf
+    	echo "initrd /initramfs-linux.img" >> /boot/loader/entries/arch.conf
+    	echo "options root=PARTUUID=$partuuid rw" >> /mnt/boot/loader/entries/arch.conf
+
   print_info "Comprobando el archico loader.conf"
 		cat /mnt/boot/loader/loader.conf
 		sleep 3
@@ -84,13 +105,14 @@ pause_function
 print_info "Creando contraseña root"
 arch-chroot /mnt passwd
 
-arch-chroot /mnt useradd -m "$usuario"
-
 print_info "Creando contraseña usuario"
-arch-chroot /mnt useradd -m -g users -G audio,lp,optical,storage,video,wheel,games,power,scanner -s /bin/bash"$usuario"
+arch-chroot /mnt useradd -m -G wheel -s /bin/bash"$usuario"
 arch-chroot /mnt passwd "$usuario"
 sleep 2
 pause_function
+
+write_header "# Habilitar servicios"
+systemctl enable NetworkManager
 
 write_header "Copiando el directorio a root"
 		cp -R "$(pwd)" /mnt/root

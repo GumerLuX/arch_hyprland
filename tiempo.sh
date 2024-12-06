@@ -5,8 +5,9 @@ start_time=$(date +%s)
 
 # ----- INICIO DE TU LÓGICA -----
 echo "Comenzando tareas..."
-
-
+pwd
+ls pwd
+cat $pwd tiempo.sh
 
 echo "Finalizando tareas..."
 # ----- FIN DE TU LÓGICA -----
