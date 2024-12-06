@@ -87,10 +87,10 @@ arch-chroot /mnt mkinitcpio -P
 arch-chroot /mnt bootctl --path=/boot install
 		echo -e "default  arch\ntimeout  5\neditor  0" > /mnt/boot/loader/loader.conf
 		partuuid=$(blkid -s PARTUUID -o value /dev/$ROOT)
-        echo "title Arch Linux" > /boot/loader/entries/arch.conf
-    	echo "linux /vmlinuz-linux" >> /boot/loader/entries/arch.conf
-    	echo "initrd  /intel-ucode.img" >> /boot/loader/entries/arch.conf
-    	echo "initrd /initramfs-linux.img" >> /boot/loader/entries/arch.conf
+        echo "title Arch Linux" > /mnt/boot/loader/entries/arch.conf
+    	echo "linux /vmlinuz-linux" >> /mnt/boot/loader/entries/arch.conf
+    	echo "initrd  /intel-ucode.img" >> /mnt/boot/loader/entries/arch.conf
+    	echo "initrd /initramfs-linux.img" >> /mnt/boot/loader/entries/arch.conf
     	echo "options root=PARTUUID=$partuuid rw" >> /mnt/boot/loader/entries/arch.conf
 
   print_info "Comprobando el archico loader.conf"
