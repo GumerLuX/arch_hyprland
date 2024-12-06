@@ -110,7 +110,7 @@ print_info "Creando contraseña root"
 arch-chroot /mnt passwd
 
 print_info "Creando contraseña usuario"
-arch-chroot /mnt useradd -m -G wheel -s /bin/bash"$usuario"
+arch-chroot /mnt useradd -m -G wheel -s $usuario
 arch-chroot /mnt passwd "$usuario"
 sleep 2
 pause_function
